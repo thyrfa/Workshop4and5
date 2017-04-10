@@ -26,6 +26,7 @@ function getFeedItemSync(feedItemId) {
   // Resolve comment author.
   feedItem.comments.forEach((comment) => {
     comment.author = readDocument('users', comment.author);
+    comment.likeCounter = comment.likeCounter.map((userId) => readDocument('users', userId))
   });
   return feedItem;
 }
@@ -99,7 +100,8 @@ export function postComment(feedItemId, author, contents, cb) {
   feedItem.comments.push({
     "author": author,
     "contents": contents,
-    "postDate": new Date().getTime()
+    "postDate": new Date().getTime(),
+    "likeCounter": []
   });
   writeDocument('feedItems', feedItem);
   // Return a resolved version of the feed item so React can
@@ -141,3 +143,23 @@ export function unlikeFeedItem(feedItemId, userId, cb) {
   // Return a resolved version of the likeCounter
   emulateServerReturn(feedItem.likeCounter.map((userId) => readDocument('users', userId)), cb);
 }
+
+export function likeComment(itemId, index, userId, cb) {
+    var item = readDocument('feedItems', itemId);
+    var comment = item.comments[index];
+    writeDocument('feedItems', item);
+    comment.likeCounter.push(userId);
+    // Return a resolved version of the likeCounter
+    emulateServerReturn(comment.likeCounter.map((userId) => readDocument('users', userId)), cb);
+}
+
+export function unlikeComment(itemId, index, userId, cb) {
+    var item = readDocument('feedItems', itemId);
+    var comment = item.comments[index];
+    var uIndex = comment.likeCounter.indexOf(userId);
+    if (uIndex !== -1) {
+        comment.likeCounter.splice(uIndex, 1);
+        writeDocument('feedItems', item);
+    }
+    emulateServerReturn(comment.likeCounter.map((userId) => readDocument('users', userId)), cb);
+  }
